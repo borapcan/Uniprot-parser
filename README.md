@@ -1,8 +1,10 @@
-# Uniprot parser/glycoprotein analyser
+**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
 
-This project was developed as a part of my masters thesis project developed at Genos in cooperation with Genadij Razdorov. The full text of the thesis available at: https://repozitorij.pharma.unizg.hr/islandora/object/pharma:1169. In order to run this program you need to download a list of glycoproteins you want to analyse.
+When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
 
-## Instructions
+*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+
+---
 
 ## Edit a file
 

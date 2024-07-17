@@ -1,68 +1,111 @@
-import search
-import mass_calculator
-import isoforms.py
-import tryptic cutter
+import re, os
+import argparse
+from contextlib import redirect_stdout
+import logging
+import json
+import datetime
 
-class Interface:
-    """ Displays a simple interface when run"""
+from utilities.helpers import sequence_helper
+from protein import protein
+from utilities.types import ProteinOutput
 
 
+def Main():
+	# reading config
+	with open("config.json", "r") as read:
+		cfg = json.load(read)
 
-    def display_menu(self):
-        print("""
--------------------------------
----------- Protein searcher------------
--------------------------------\n
-Choose options for your protein search:
-    1: Protein name
-    2: Glycosilation sites
-    3: Protein sequence
-	4: Protein isoforms 
-	5: Tryptic cut of the protein
-	5: Protein mass calculator
-	6: Protein isoform mass calculator
-    7: Protein tryptic cut mass calculator
+	# setting up argparser
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-p", "--path", help="Path to XML file containing protein data you want to mine. Accession "
+																					"numbers must be separated.", type=str)
+	parser.add_argument("sequences", help="As input write the string of your sequence or your accession number",
+																					type=str, nargs='+')
+	parser.add_argument("--debug", help="Show debug messages to stdout", action="store_true")
+	parser.add_argument("-q", "--quiet", help = "Show compact output", action="store_true")
+	group = parser.add_mutually_exclusive_group()
+	group.add_argument("-o", "--output", help="Output your search or result as a human readable file", action="store_true")
+	group.add_argument("-j", "--json", help="Output your query results to json file(computer readable file)",
+																				action="store_true")
 
-To see your notes use: show
+	args = parser.parse_args()
 
-To remove use: remove <note name>
+	# setting up logger
+	logger = logging.getLogger('MAIN')
+	if args.debug:
+		logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s][%(levelname)s]  %(message)s")
+	else:
+		logging.basicConfig(level=logging.INFO, format="[%(asctime)s][%(levelname)s]  %(message)s")
 
-To exit use: exit
-""")
-    
-	def _note_maker(self,lst):
-        if :
-            print("Invalid input! Separate words with colons! (':')")
-        else:
-            try:
-                self.nb.make_task(*lst)
-            except ValueError:
-                print('Ooooopsies, you made a boo-boo!')	
+	sequence_counter = 1
 
-    def run(self):
-        while True:
-            self.display_menu()
-            note_in = input('Write your note: ').split(":")
-            if 'exit' in note_in:
-                self.nb.quit()
-                sys.exit(0)
-            elif 'show' in note_in:
-                if len(note_in) == 2:
-                    self.nb.show(note_in[1])
-                    sleep(5)
-                else:
-                    self.nb.show()
-                    sleep(5)
-            elif 'remove' in note_in:
-                if len(note_in) == 2:
-                    print("Attempting remove...")
-                    print(note_in[1])
-                    sleep(2)
-                    self.nb.rem_task(note_in[1])
-                else:
-                    print("Please specify note to remove!")
+	output = {}
+	isoforms = {}
 
-            else:
-                self._note_maker(note_in)
+	if args.path:
+		if args.path.endswith(".xml"):
+			path = os.path.normpath(args.path)
+		else:
+			raise EnvironmentError(f"Initializing parsing failed with file: {args.path}")
+	else:
+		path = None
 
-				BIT BUCKET				
+	for seq in args.sequences:
+		t1 = datetime.datetime.timestamp(datetime.datetime.now())
+		arg_sequence = seq.upper()  # arg_sequences upper cased for proper matching
+		logger.debug(f"Working on sequence: {arg_sequence}")
+		if re.match('[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}', arg_sequence):
+			pprotein = protein(xmlfile=path, acc=arg_sequence)
+			logger.debug(f"Looking for your entry in input file: {args.path}")
+			logger.debug(f"MATCH FOUND FOR SEQUENCE: {arg_sequence} -- PROCESSING --")
+			for protein_number in pprotein.isoforms.keys():
+				isoforms[protein_number] = pprotein.isoforms[protein_number].sequence
+			parsed_protein = ProteinOutput(
+							name=pprotein.name,
+							sequence=pprotein.sequence,
+							mass=pprotein.mass,
+							glycosylationSites=pprotein.glycosylation,
+							trypticDigestion=pprotein.tryptic_peptides,
+							isoforms=isoforms
+							)
+			if args.json:
+				output[parsed_protein.name] = parsed_protein.json_output()
+			else:
+				output[parsed_protein.name] = parsed_protein
+
+		elif re.match("[ACDEFGHIKLMNPQRSTUVWY]+$", arg_sequence):
+			logger.debug("WORKING ON CUSTOM IMPORT SEQUENCE")
+			pprotein = protein(xmlfile=path, sequence=arg_sequence)
+			parsed_protein = sequence_helper(pprotein, sequence_counter)
+			if args.json:
+				output[parsed_protein.name] = parsed_protein.json_output()
+			else:
+				output[parsed_protein.name] = parsed_protein
+		else:
+			raise ValueError(
+				'You have entered a non-existent sequence, please review your sequence before trying to process it again.')
+		t2 = datetime.datetime.timestamp(datetime.datetime.now())
+		logger.debug(f"Processing took: {t2-t1}s")
+		sequence_counter += 1
+
+	if args.output:
+		logger.debug("Outputting data as text")
+		with open(cfg["text_output"], 'w') as out:
+			with redirect_stdout(out):
+				for pprotein in output.values():
+					pprotein.formatted_output()
+	elif args.json:
+		logger.debug("Outputting data as json")
+		with open(cfg["json_output"], 'w') as outfile:
+			json.dump(output, outfile)
+	else:
+		if args.quiet:
+			for pprotein in output.values():
+				print(pprotein)
+		else:
+			for pprotein in output.values():
+				pprotein.formatted_output()
+
+
+if __name__ == "__main__":
+	Main()

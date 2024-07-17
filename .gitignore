@@ -1,5 +1,8 @@
-*.swp
 *~
 .cache
+*.swp
 __pycache__
+*.idea
+protein_query.txt
+config.json
 *.xml
