@@ -1,6 +1,6 @@
 # Uniprot parser/glycoprotein analyser
 
-This project was developed as a part of my masters thesis project developed at Genos in cooperation with Genadij Razdorov. The full text of the thesis available at: https://repozitorij.pharma.unizg.hr/islandora/object/pharma:1169
+This project was developed as a part of my masters thesis project developed at Genos in cooperation with Genadij Razdorov. The full text of the thesis available at: https://repozitorij.pharma.unizg.hr/islandora/object/pharma:1169. In order to run this program you need to download a list of glycoproteins you want to analyse.
 
 ## Instructions
 
